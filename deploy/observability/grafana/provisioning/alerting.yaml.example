@@ -1,0 +1,23 @@
+# Example Grafana alert rule (copy to provisioning/alerting/ and add a contact point):
+# fires when >= 5 failed logins happen within 5 minutes.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: vitals-security
+    folder: Vitals Monitor
+    interval: 1m
+    rules:
+      - uid: failed-logins
+        title: Brute-force login attempts
+        condition: B
+        data:
+          - refId: A
+            datasourceUid: loki
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: sum(count_over_time({service="backend"} | json | event="audit" | action="login" | outcome="failure" [5m]))
+          - refId: B
+            datasourceUid: __expr__
+            model: { type: threshold, expression: A, conditions: [{ evaluator: { type: gt, params: [4] } }] }
+        for: 0m
+        labels: { severity: warning }

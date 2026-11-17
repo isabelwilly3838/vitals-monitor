@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+concurrency: { group: "${{ github.workflow }}-${{ github.ref }}", cancel-in-progress: true }
+
+permissions: { contents: read }
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: backend/requirements-dev.txt }
+      - run: pip install -r backend/requirements-dev.txt
+      - run: ruff check backend
+      - run: ruff format --check backend
+
+  test:
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}", cache: pip, cache-dependency-path: backend/requirements-dev.txt }
+      - run: pip install -r requirements-dev.txt
+      - name: Test (unit + integration + property-based) with coverage gate
+        run: python -m pytest --cov --cov-report=xml --cov-report=html --junitxml=junit.xml --hypothesis-show-statistics
+      - name: Coverage summary
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          r = ET.parse("coverage.xml").getroot()
+          print(f"### Coverage: {float(r.get('line-rate'))*100:.1f}% lines, {float(r.get('branch-rate'))*100:.1f}% branches")
+          root = ET.parse("junit.xml").getroot()
+          t = root if root.tag == "testsuite" else root.find("testsuite")
+          print(f"Tests: {t.get('tests')} · failures: {t.get('failures')} · errors: {t.get('errors')} · time: {t.get('time')}s")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        with: { name: test-reports, path: "backend/htmlcov\nbackend/coverage.xml\nbackend/junit.xml" }
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: backend/requirements-dev.txt }
+      - run: pip install -r backend/requirements-dev.txt
+      - name: Dependency vulnerability scan
+        run: pip-audit -r backend/requirements.txt
+      - name: Static security analysis
+        run: bandit -q -ll -r backend/app -c backend/pyproject.toml   # fail on medium+ severity
+
+  docker:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          load: true
+          tags: vitals-monitor-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test the container (prod config, generated secrets)
+        run: |
+          python3 -m pip install -q cryptography bcrypt
+          python3 scripts/setup.py --secrets || true
+          docker run -d --name smoke -p 8000:8000 \
+            -e JWT_SECRETS="$(cat deploy/secrets/jwt_secrets)" \
+            -e ENCRYPTION_KEYS="$(cat deploy/secrets/encryption_keys)" \
+            -e USERS_JSON="$(cat deploy/secrets/users.json)" vitals-monitor-backend:ci
+          for i in $(seq 1 30); do curl -fs localhost:8000/health/ready && break; sleep 1; done
+          curl -fs localhost:8000/fhir/metadata | grep -q CapabilityStatement
+          docker logs smoke | head -5

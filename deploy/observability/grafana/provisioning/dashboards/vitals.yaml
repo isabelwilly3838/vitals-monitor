@@ -1,0 +1,6 @@
+apiVersion: 1
+providers:
+  - name: vitals
+    folder: Vitals Monitor
+    type: file
+    options: { path: /var/lib/grafana/dashboards }

@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.hypothesis/
+.coverage
+coverage.xml
+junit.xml
+htmlcov/
+.ruff_cache/
+data/
+.env
+deploy/secrets/
+deploy/nginx/certs/
+.DS_Store

@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+      - id: detect-private-key
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: pytest (fast, no hypothesis)
+        entry: bash -c 'cd backend && ../.venv/bin/python -m pytest -q -x -k "not property" --no-cov'
+        language: system
+        pass_filenames: false
+        files: ^backend/
+        stages: [pre-push]
