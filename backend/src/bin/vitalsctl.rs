@@ -26,18 +26,29 @@ fn token(n: usize) -> String {
         .collect()
 }
 
+/// Secret files are bind-mounted into containers that run as a *different* uid (the
+/// non-root `app` user), so they must be world-readable (0644). Host-side protection comes
+/// from the directory: `deploy/secrets` is 0700, so other host users cannot reach them.
+#[cfg(unix)]
+fn set_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(mode))?;
+    Ok(())
+}
+#[cfg(not(unix))]
+fn set_mode(_: &Path, _: u32) -> anyhow::Result<()> {
+    Ok(())
+}
+
 fn write_secret(dir: &Path, name: &str, value: &str) -> anyhow::Result<()> {
     let path = dir.join(name);
     if path.exists() {
+        set_mode(&path, 0o644)?; // repair files created by older versions with 0600
         println!("    keep  deploy/secrets/{name}");
         return Ok(());
     }
     fs::write(&path, value)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
-    }
+    set_mode(&path, 0o644)?;
     println!("    wrote deploy/secrets/{name}");
     Ok(())
 }
@@ -45,6 +56,7 @@ fn write_secret(dir: &Path, name: &str, value: &str) -> anyhow::Result<()> {
 fn gen_secrets() -> anyhow::Result<()> {
     let dir = root().join("deploy/secrets");
     fs::create_dir_all(&dir)?;
+    set_mode(&dir, 0o700)?;
     write_secret(&dir, "jwt_secrets", &token(64))?;
     write_secret(&dir, "encryption_keys", &generate_key())?;
     write_secret(&dir, "db_password", &token(32))?;

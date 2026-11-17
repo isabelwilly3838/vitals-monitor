@@ -175,21 +175,26 @@ pub fn config_dir() -> PathBuf {
 }
 
 /// Turn `APP_X__Y_FILE=/run/secrets/y` into `APP_X__Y=<file contents>` (if not already set).
-fn read_secret_files() {
+/// A `_FILE` that cannot be read is a hard error naming the variable - never silently
+/// ignored (that would surface later as a confusing "secret missing" failure).
+fn read_secret_files() -> Result<(), String> {
     for (key, value) in std::env::vars() {
-        if let Some(target) = key.strip_suffix("_FILE")
-            && target.starts_with("APP_")
-            && std::env::var(target).is_err()
-            && let Ok(contents) = std::fs::read_to_string(&value)
-        {
-            // SAFETY: called once at startup before any threads are spawned.
-            unsafe { std::env::set_var(target, contents.trim()) };
+        let Some(target) = key.strip_suffix("_FILE") else {
+            continue;
+        };
+        if !target.starts_with("APP_") || std::env::var(target).is_ok() {
+            continue;
         }
+        let contents = std::fs::read_to_string(&value)
+            .map_err(|e| format!("cannot read secret file for {key} ({value}): {e}"))?;
+        // SAFETY: called once at startup before any threads are spawned.
+        unsafe { std::env::set_var(target, contents.trim()) };
     }
+    Ok(())
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    read_secret_files();
+    read_secret_files().map_err(config::ConfigError::Message)?;
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or_else(|_| "dev".into())
         .try_into()

@@ -96,7 +96,7 @@ jobs:
           context: .
           file: backend/Dockerfile
           load: true
-          tags: vitals-monitor-backend:ci
+          tags: vitals-monitor-backend:latest   # the tag compose uses -> no second build
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: dtolnay/rust-toolchain@stable
@@ -105,10 +105,15 @@ jobs:
       - name: Smoke test the whole stack (prod config, generated secrets)
         run: |
           (cd backend && cargo run -q --bin vitalsctl -- gen-secrets)
-          docker compose up -d postgres backend
+          docker compose up -d --no-build postgres backend
           for i in $(seq 1 40); do
-            docker compose exec -T backend vitalsctl health && break; sleep 2
+            docker compose exec -T backend vitalsctl health 2>/dev/null && break; sleep 2
           done
           docker compose exec -T backend vitalsctl health http://127.0.0.1:8000/fhir/metadata
-          docker compose logs backend | head -20
+          echo "stack healthy"
+      - name: Container logs
+        if: always()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail 60 backend postgres
           docker compose down -v
