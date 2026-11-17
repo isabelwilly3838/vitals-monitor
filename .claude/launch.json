@@ -4,7 +4,10 @@
     {
       "name": "vitals-dev",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd backend && APP_ENV=dev ../.venv/bin/uvicorn app.main:app --port 8000"],
+      "runtimeArgs": [
+        "-c",
+        "make dev"
+      ],
       "port": 8000
     }
   ]

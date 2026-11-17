@@ -1,0 +1,7 @@
+[profile.ci]
+fail-fast = false
+retries = 1                 # flaky-test detection: a pass-on-retry is reported as FLAKY
+slow-timeout = { period = "30s", terminate-after = 2 }
+
+[profile.ci.junit]
+path = "junit.xml"          # test report artifact (target/nextest/ci/junit.xml)

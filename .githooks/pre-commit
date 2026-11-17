@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# Fast checks on every commit: formatting + lints. Installed by `make setup`
+# (git config core.hooksPath .githooks).
+set -e
+cd "$(git rev-parse --show-toplevel)/backend"
+cargo fmt --check || { echo "run: cargo fmt"; exit 1; }
+cargo clippy --all-targets --quiet -- -D warnings
+# never commit secrets
+if git diff --cached --name-only | grep -E '(^|/)(deploy/secrets|.*\.key$|\.env$)'; then
+  echo "refusing to commit secret material"; exit 1
+fi

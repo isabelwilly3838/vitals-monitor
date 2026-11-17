@@ -1,0 +1,12 @@
+# Integration tests: random port, fresh database per test, no background simulator.
+application:
+  port: 0
+  serve_frontend: false
+simulator:
+  enabled: false
+  seed: 42
+security:
+  login_rate_per_minute: 1000
+resilience:
+  breaker_failure_threshold: 3
+  breaker_reset_timeout_ms: 200

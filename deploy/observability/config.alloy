@@ -21,9 +21,14 @@ loki.source.docker "vitals" {
   forward_to = [loki.process.json.receiver]
 }
 
+// Backend logs are Bunyan JSON (numeric level: 30 info, 40 warn, 50 error, 60 fatal).
 loki.process "json" {
   stage.json {
     expressions = { level = "level" }
+  }
+  stage.template {
+    source   = "level"
+    template = "{{ if eq .Value \"30\" }}info{{ else if eq .Value \"40\" }}warning{{ else if eq .Value \"50\" }}error{{ else if eq .Value \"60\" }}critical{{ else if eq .Value \"20\" }}debug{{ else }}{{ .Value }}{{ end }}"
   }
   stage.labels {
     values = { level = "" }

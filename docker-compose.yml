@@ -1,30 +1,44 @@
-# Production-like stack:  python scripts/setup.py --secrets && docker compose up --build
+# Production-like stack:  make up   (vitalsctl gen-secrets + docker compose up --build)
 # With central logging:   docker compose --profile observability up --build
 name: vitals-monitor
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: vitals
+      POSTGRES_DB: vitals
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes: [pg-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vitals -d vitals"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [internal]
+
   backend:
     build: { context: ., dockerfile: backend/Dockerfile }
     image: vitals-monitor-backend:latest
+    depends_on:
+      postgres: { condition: service_healthy }
     environment:
-      APP_ENV: prod
-      JWT_SECRETS_FILE: /run/secrets/jwt_secrets
-      ENCRYPTION_KEYS_FILE: /run/secrets/encryption_keys
-      USERS_JSON_FILE: /run/secrets/users_json
-    secrets: [jwt_secrets, encryption_keys, users_json]
-    volumes: [vitals-data:/data]
+      APP_ENVIRONMENT: prod
+      APP_DATABASE__USERNAME: vitals
+      APP_DATABASE__PASSWORD_FILE: /run/secrets/db_password
+      APP_SECURITY__JWT_SECRETS_FILE: /run/secrets/jwt_secrets
+      APP_SECURITY__ENCRYPTION_KEYS_FILE: /run/secrets/encryption_keys
+      APP_SECURITY__USERS_JSON_FILE: /run/secrets/users_json
+      RUST_LOG: info
+    secrets: [db_password, jwt_secrets, encryption_keys, users_json]
     read_only: true
-    tmpfs: [/tmp]
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped            # self-healing: crashed container is restarted
     deploy:
-      resources: { limits: { cpus: "1.0", memory: 512M } }
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health/ready',timeout=2)"]
-      interval: 15s
-      timeout: 3s
-      retries: 3
+      resources: { limits: { cpus: "1.0", memory: 256M } }
     labels: { logging: "vitals" }
     networks: [internal]
 
@@ -73,13 +87,14 @@ services:
     networks: [internal, edge]
 
 secrets:
+  db_password: { file: ./deploy/secrets/db_password }
   jwt_secrets: { file: ./deploy/secrets/jwt_secrets }
   encryption_keys: { file: ./deploy/secrets/encryption_keys }
   users_json: { file: ./deploy/secrets/users.json }
   grafana_admin: { file: ./deploy/secrets/grafana_admin }
 
 volumes:
-  vitals-data:
+  pg-data:
 
 networks:
   internal: { internal: false }

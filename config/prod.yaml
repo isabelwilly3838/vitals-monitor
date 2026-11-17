@@ -1,0 +1,12 @@
+# Production container. Secrets MUST come from the environment / docker secrets:
+#   APP_SECURITY__JWT_SECRETS(_FILE), APP_SECURITY__ENCRYPTION_KEYS(_FILE),
+#   APP_SECURITY__USERS_JSON(_FILE), APP_DATABASE__PASSWORD(_FILE)
+# The binary refuses to start if they are missing or weak.
+application:
+  host: 0.0.0.0
+  serve_frontend: false
+database:
+  host: postgres
+  port: 5432
+security:
+  jwt_secrets: ""

@@ -1,0 +1,11 @@
+# cargo-audit policy. Every ignore needs a justification.
+[advisories]
+ignore = [
+    # rsa (Marvin attack): only reachable through sqlx-mysql, which this crate never enables;
+    # it appears in Cargo.lock because sqlx-macros lists all drivers optionally. Not compiled
+    # (verify: `cargo tree -i rsa --target all` prints nothing).
+    "RUSTSEC-2023-0071",
+    # libsqlite3-sys: same situation via sqlx-sqlite (not compiled, not linked).
+    "RUSTSEC-2026-0459",
+]
+informational_warnings = ["unmaintained"]

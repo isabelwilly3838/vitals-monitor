@@ -15,7 +15,7 @@ groups:
             datasourceUid: loki
             relativeTimeRange: { from: 300, to: 0 }
             model:
-              expr: sum(count_over_time({service="backend"} | json | event="audit" | action="login" | outcome="failure" [5m]))
+              expr: sum(count_over_time({service="backend"} | json | msg="audit" | action="login" | outcome="failure" [5m]))
           - refId: B
             datasourceUid: __expr__
             model: { type: threshold, expression: A, conditions: [{ evaluator: { type: gt, params: [4] } }] }

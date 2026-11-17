@@ -1,0 +1,33 @@
+# Shared defaults. Overridden by config/<APP_ENVIRONMENT>.yaml, then by environment
+# variables  APP_<SECTION>__<KEY>  (e.g. APP_DATABASE__PASSWORD), then by
+# APP_<SECTION>__<KEY>_FILE  (Docker secrets). Validated at startup.
+application:
+  host: 127.0.0.1
+  port: 8000
+  serve_frontend: true
+  max_body_bytes: 65536
+database:
+  host: localhost
+  port: 5433
+  username: postgres
+  password: ""
+  database_name: vitals
+  require_ssl: false
+  max_connections: 10
+security:
+  jwt_secrets: "dev-only-insecure-jwt-secret-change-me-000000000"
+  jwt_ttl_minutes: 15
+  jwt_issuer: vitals-monitor
+  encryption_keys: ""
+  users_json: ""
+  login_rate_per_minute: 10
+simulator:
+  enabled: true
+  hz: 1.0
+  seed: null
+resilience:
+  store_retry_attempts: 3
+  breaker_failure_threshold: 5
+  breaker_reset_timeout_ms: 10000
+  fallback_buffer_size: 10000
+  ws_auth_timeout_ms: 5000

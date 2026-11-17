@@ -29,7 +29,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (level) (count_over_time({service=\"backend\"} | json [1m]))",
+          "expr": "sum by (level) (count_over_time({service=\"backend\"} [1m]))",
           "legendFormat": "{{level}}"
         }
       ],
@@ -60,7 +60,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service=\"backend\"} |= \"vital_alert_raised\" [5m]))",
+          "expr": "sum(count_over_time({service=\"backend\"} |= \"vital alert raised\" [5m]))",
           "legendFormat": "alerts"
         }
       ],
@@ -77,7 +77,7 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "HTTP errors by status",
+      "title": "HTTP responses by status",
       "gridPos": {
         "x": 0,
         "y": 8,
@@ -91,8 +91,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) (count_over_time({service=\"backend\"} | json | event=\"http_request\" | status >= 400 [1m]))",
-          "legendFormat": "{{status}}"
+          "expr": "sum by (http_status_code) (count_over_time({service=\"backend\"} | json | msg=\"[HTTP REQUEST - END]\" [1m]))",
+          "legendFormat": "{{http_status_code}}"
         }
       ],
       "fieldConfig": {
@@ -122,7 +122,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service=\"backend\"} | json | event=\"audit\" | action=\"login\" | outcome=\"failure\" [5m]))",
+          "expr": "sum(count_over_time({service=\"backend\"} | json | msg=\"audit\" | action=\"login\" | outcome=\"failure\" [5m]))",
           "legendFormat": "failed logins"
         }
       ],
@@ -153,8 +153,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (event) (count_over_time({service=\"backend\"} | json | event=~\"breaker_opened|store_degraded_buffering|retry_exhausted\" [1m]))",
-          "legendFormat": "{{event}}"
+          "expr": "sum by (msg) (count_over_time({service=\"backend\"} | json | msg=~\"circuit opened|storage degraded, buffering write|retry exhausted\" [1m]))",
+          "legendFormat": "{{msg}}"
         }
       ],
       "fieldConfig": {
@@ -184,8 +184,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "quantile_over_time(0.95, {service=\"backend\"} | json | event=\"http_request\" | unwrap duration_ms [1m]) by (path)",
-          "legendFormat": "{{path}}"
+          "expr": "quantile_over_time(0.95, {service=\"backend\"} | json | msg=\"[HTTP REQUEST - END]\" | unwrap elapsed_milliseconds [1m]) by (http_route)",
+          "legendFormat": "{{http_route}}"
         }
       ],
       "fieldConfig": {
