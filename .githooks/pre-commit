@@ -2,6 +2,8 @@
 # Fast checks on every commit: formatting + lints. Installed by `make setup`
 # (git config core.hooksPath .githooks).
 set -e
+# find cargo even when rustup is keg-only (Homebrew) or not on the GUI app PATH
+export PATH="$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin:$PATH"
 cd "$(git rev-parse --show-toplevel)/backend"
 cargo fmt --check || { echo "run: cargo fmt"; exit 1; }
 cargo clippy --all-targets --quiet -- -D warnings

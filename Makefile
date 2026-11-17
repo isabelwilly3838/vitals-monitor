@@ -1,5 +1,7 @@
 # Developer workflow (macOS / Linux; on Windows use WSL or `docker compose`).
 SHELL   := /bin/bash
+# rustup from Homebrew is keg-only: make cargo findable without editing ~/.zshrc
+export PATH := $(HOME)/.cargo/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin:$(PATH)
 PG_BIN  ?= $(shell pg_config --bindir 2>/dev/null || echo /opt/homebrew/opt/postgresql@17/bin)
 PGDATA  := data/pg
 PGPORT  := 5433
