@@ -7,13 +7,24 @@ use super::stream::*;
 use crate::fhir::codes as c;
 
 pub fn threshold_flags(temp: f64, sys: f64, dia: f64) -> u8 {
+    partial_threshold_flags(Some(temp), Some(sys), Some(dia))
+}
+
+/// Threshold rules for a sample where some vitals were not measured (e.g. a
+/// temperature-only sensor). Missing values never raise or suppress an alert.
+pub fn partial_threshold_flags(temp: Option<f64>, sys: Option<f64>, dia: Option<f64>) -> u8 {
     let mut f = 0;
-    if temp >= c::TEMP_HIGH {
-        f |= ALERT_FEVER;
+    if let Some(temp) = temp {
+        if temp >= c::TEMP_HIGH {
+            f |= ALERT_FEVER;
+        }
+        if temp < c::TEMP_LOW {
+            f |= ALERT_HYPOTHERMIA;
+        }
     }
-    if temp < c::TEMP_LOW {
-        f |= ALERT_HYPOTHERMIA;
-    }
+    let (Some(sys), Some(dia)) = (sys, dia) else {
+        return f;
+    };
     if sys >= c::SYS_HIGH || dia >= c::DIA_HIGH {
         f |= ALERT_HYPERTENSION;
     }
@@ -66,9 +77,17 @@ pub struct AlertEngine {
 }
 
 impl AlertEngine {
-    pub fn evaluate(&mut self, patient: &str, temp: f64, sys: f64, dia: f64) -> u8 {
-        let mut flags = threshold_flags(temp, sys, dia);
-        if self.roc.entry(patient.into()).or_default().check(sys) {
+    pub fn evaluate(
+        &mut self,
+        patient: &str,
+        temp: Option<f64>,
+        sys: Option<f64>,
+        dia: Option<f64>,
+    ) -> u8 {
+        let mut flags = partial_threshold_flags(temp, sys, dia);
+        if let Some(sys) = sys
+            && self.roc.entry(patient.into()).or_default().check(sys)
+        {
             flags |= ALERT_RAPID_CHANGE;
         }
         // log transitions only, so a sustained fever does not flood the log pipeline
@@ -99,6 +118,22 @@ mod tests {
             threshold_flags(34.0, 85.0, 50.0),
             ALERT_HYPOTHERMIA | ALERT_HYPOTENSION
         );
+    }
+
+    #[test]
+    fn temperature_only_readings_still_alert() {
+        assert_eq!(partial_threshold_flags(Some(38.5), None, None), ALERT_FEVER);
+        assert_eq!(
+            partial_threshold_flags(Some(34.0), None, None),
+            ALERT_HYPOTHERMIA
+        );
+        assert_eq!(partial_threshold_flags(Some(37.0), None, None), 0);
+        assert_eq!(
+            partial_threshold_flags(None, Some(150.0), Some(80.0)),
+            ALERT_HYPERTENSION
+        );
+        let mut e = AlertEngine::default();
+        assert_eq!(e.evaluate("P004", Some(38.4), None, None), ALERT_FEVER);
     }
 
     #[test]

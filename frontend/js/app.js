@@ -123,12 +123,16 @@ setInterval(() => {
   lastBytes = stream.bytes;
 }, 1000);
 
+const REAL_SENSOR_PATIENTS = new Set(["P004"]);
+
 function renderPatientTabs() {
   const el = $("patients");
   el.replaceChildren();
   for (const pid of state.allowed) {
     const b = document.createElement("button");
-    b.textContent = pid;
+    b.dataset.pid = pid;
+    // P004 is fed by the real Arduino sensor (hardware/), the others are simulated
+    b.textContent = REAL_SENSOR_PATIENTS.has(pid) ? `${pid} · live sensor` : pid;
     b.setAttribute("role", "tab");
     b.onclick = () => selectPatient(pid);
     el.append(b);
@@ -137,7 +141,7 @@ function renderPatientTabs() {
 }
 function markTabs() {
   for (const b of $("patients").children) {
-    const on = b.textContent === state.current;
+    const on = b.dataset.pid === state.current;
     b.classList.toggle("on", on);
     b.setAttribute("aria-selected", String(on));
   }

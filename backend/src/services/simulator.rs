@@ -14,18 +14,27 @@ pub struct PatientProfile {
     pub gender: &'static str,
     pub birth_year: i32,
     pub device_id: &'static str,
+    pub device_model: &'static str,
+    /// `false` = a real sensor reports for this patient (via the USB bridge); the
+    /// simulator leaves it alone so real and synthetic data never mix.
+    pub simulated: bool,
     pub base_temp: f64,
     pub base_sys: f64,
     pub base_dia: f64,
 }
 
-pub const DEMO_PATIENTS: [PatientProfile; 3] = [
+pub const SIMULATED_MODEL: &str = "VitalPatch BT-2 (simulated)";
+
+/// P001-P003 are simulated; P004 is the real Arduino sensor.
+pub const DEMO_PATIENTS: [PatientProfile; 4] = [
     PatientProfile {
         patient_id: "P001",
         pseudonym: "STUDY-0001",
         gender: "female",
         birth_year: 1958,
         device_id: "D001",
+        device_model: SIMULATED_MODEL,
+        simulated: true,
         base_temp: 36.7,
         base_sys: 128.0,
         base_dia: 82.0,
@@ -36,6 +45,8 @@ pub const DEMO_PATIENTS: [PatientProfile; 3] = [
         gender: "male",
         birth_year: 1971,
         device_id: "D002",
+        device_model: SIMULATED_MODEL,
+        simulated: true,
         base_temp: 36.9,
         base_sys: 131.0,
         base_dia: 84.0,
@@ -46,9 +57,23 @@ pub const DEMO_PATIENTS: [PatientProfile; 3] = [
         gender: "female",
         birth_year: 1994,
         device_id: "D003",
+        device_model: SIMULATED_MODEL,
+        simulated: true,
         base_temp: 36.5,
         base_sys: 112.0,
         base_dia: 72.0,
+    },
+    PatientProfile {
+        patient_id: "P004",
+        pseudonym: "STUDY-0004",
+        gender: "unknown",
+        birth_year: 2000,
+        device_id: "D004",
+        device_model: "Elegoo UNO R3 + 10k NTC thermistor (hardware/arduino)",
+        simulated: false,
+        base_temp: 36.8,
+        base_sys: 120.0,
+        base_dia: 80.0,
     },
 ];
 

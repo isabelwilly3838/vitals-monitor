@@ -75,6 +75,20 @@ jobs:
         with: { workspaces: backend }
       - run: cargo test --lib --test fhir --test property
 
+  # USB -> FHIR bridge for the Arduino sensor (separate crate: no serial deps in the backend).
+  bridge:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: hardware/bridge } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "rustfmt, clippy" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: hardware/bridge }
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
   security:
     runs-on: ubuntu-latest
     steps:

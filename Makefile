@@ -8,7 +8,7 @@ PGPORT  := 5433
 PSQL    := $(PG_BIN)/psql -h localhost -p $(PGPORT) -U postgres
 CARGO   := cd backend && cargo
 
-.PHONY: setup check-env db db-stop dev test cov lint fmt audit up up-obs down rotate-keys clean-test-dbs
+.PHONY: setup check-env db db-stop dev test cov lint fmt audit up up-obs down rotate-keys clean-test-dbs bridge
 
 setup: check-env           ## hooks, secrets, TLS cert, local database
 	git config core.hooksPath .githooks
@@ -52,6 +52,9 @@ audit:                     ## dependency vulnerability scan (needs: cargo instal
 clean-test-dbs:            ## drop the per-test databases created by the integration tests
 	@for db in $$($(PSQL) -tAc "SELECT datname FROM pg_database WHERE datname LIKE 'test_%'"); do \
 	  $(PSQL) -qc "DROP DATABASE \"$$db\""; done; echo "test databases dropped"
+
+bridge:                    ## Arduino USB -> FHIR bridge (hardware/README.md); extra flags: ARGS="--port ..."
+	cd hardware/bridge && cargo run --release -q -- $(ARGS)
 
 up:                        ## production-like stack: https://localhost
 	$(CARGO) run -q --bin vitalsctl -- gen-secrets

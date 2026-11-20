@@ -80,11 +80,7 @@ impl AppState {
                         effective: None,
                     },
                     Row_ {
-                        resource: b::device(
-                            p.device_id,
-                            p.patient_id,
-                            "VitalPatch BT-2 (simulated)",
-                        ),
+                        resource: b::device(p.device_id, p.patient_id, p.device_model),
                         patient_id: Some(p.patient_id.into()),
                         code: None,
                         effective: None,
@@ -165,10 +161,11 @@ impl AppState {
                 .await;
         }
 
-        let alerts = match (temp, sys, dia) {
-            (Some(t), Some(s), Some(d)) => self.alerts.lock().unwrap().evaluate(patient, t, s, d),
-            _ => 0,
-        };
+        let alerts = self
+            .alerts
+            .lock()
+            .unwrap()
+            .evaluate(patient, temp, sys, dia);
         self.hub.publish(Sample {
             patient_id: patient.into(),
             patient_index: idx as u8,
@@ -254,6 +251,7 @@ impl AppState {
         let s = &self.settings.simulator;
         let mut sims: Vec<VitalsSimulator> = DEMO_PATIENTS
             .iter()
+            .filter(|p| p.simulated)
             .enumerate()
             .map(|(i, p)| VitalsSimulator::new(p.clone(), s.hz, s.seed.map(|x| x + i as u64)))
             .collect();

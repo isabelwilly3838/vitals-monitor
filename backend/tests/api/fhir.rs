@@ -92,7 +92,7 @@ async fn clinician_sees_all_patients() {
         .json()
         .await
         .unwrap();
-    assert_eq!(bundle["total"], 3);
+    assert_eq!(bundle["total"], 4); // P001-P003 simulated + P004 real Arduino sensor
     assert_eq!(b::validate_schema(&bundle), vec![]);
 }
 
